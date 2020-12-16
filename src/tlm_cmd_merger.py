@@ -185,54 +185,56 @@ def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sql
     :return:
     """
     for module_name in command_data['modules']:
-        for command in command_data['modules'][module_name]['commands']:
-            command_dict = command_data['modules'][module_name]['commands'][command]
-            message_id = command_dict['msgID']
-            sub_commands = command_data['modules'][module_name]['commands']
+        if 'commands' in command_data['modules'][module_name]:
+            for command in command_data['modules'][module_name]['commands']:
+                command_dict = command_data['modules'][module_name]['commands'][command]
+                message_id = command_dict['msgID']
+                sub_commands = command_data['modules'][module_name]['commands']
 
-            for sub_command in sub_commands[command]['commands']:
-                sub_command_dict = sub_commands[command]['commands']
-                name = sub_command
+                for sub_command in sub_commands[command]['commands']:
+                    sub_command_dict = sub_commands[command]['commands']
+                    name = sub_command
 
-                symbol = get_symbol_id(sub_command_dict[name]['struct'], db_cursor)
+                    symbol = get_symbol_id(sub_command_dict[name]['struct'], db_cursor)
 
-                # If the symbol does not exist, we skip it
-                if symbol:
-                    symbol_id = symbol[0]
-                    command_code = sub_command_dict[name]['cc']
+                    # If the symbol does not exist, we skip it
+                    if symbol:
+                        symbol_id = symbol[0]
+                        command_code = sub_command_dict[name]['cc']
 
-                    macro = command
+                        macro = command
 
-                    # Write our command record to the database.
-                    db_cursor.execute('INSERT INTO commands(name, command_code, message_id, macro, symbol ,module) '
-                                      'VALUES (?, ?, ?, ?, ?, ?)',
-                                      (name, command_code, message_id, macro, symbol_id, modules_dict[module_name],))
+                        # Write our command record to the database.
+                        db_cursor.execute('INSERT INTO commands(name, command_code, message_id, macro, symbol ,module) '
+                                          'VALUES (?, ?, ?, ?, ?, ?)',
+                                          (name, command_code, message_id, macro, symbol_id, modules_dict[module_name],))
 
     if 'core' in command_data:
         for module_name in command_data['core']['cfe'].keys():
             if module_name != 'config':
-                for command in command_data['core']['cfe'][module_name]['commands']:
-                    command_dict = command_data['core']['cfe'][module_name]['commands'][command]
-                    message_id = command_dict['msgID']
-                    sub_commands = command_data['core']['cfe'][module_name]['commands']
+                if 'commands' in command_data['core']['cfe'][module_name]:
+                    for command in command_data['core']['cfe'][module_name]['commands']:
+                        command_dict = command_data['core']['cfe'][module_name]['commands'][command]
+                        message_id = command_dict['msgID']
+                        sub_commands = command_data['core']['cfe'][module_name]['commands']
 
-                    for sub_command in sub_commands[command]['commands']:
-                        sub_command_dict = sub_commands[command]['commands']
-                        name = sub_command
+                        for sub_command in sub_commands[command]['commands']:
+                            sub_command_dict = sub_commands[command]['commands']
+                            name = sub_command
 
-                        symbol = get_symbol_id(sub_command_dict[name]['struct'], db_cursor)
+                            symbol = get_symbol_id(sub_command_dict[name]['struct'], db_cursor)
 
-                        # If the symbol does not exist, we skip it
-                        if symbol:
-                            symbol_id = symbol[0]
-                            command_code = sub_command_dict[name]['cc']
+                            # If the symbol does not exist, we skip it
+                            if symbol:
+                                symbol_id = symbol[0]
+                                command_code = sub_command_dict[name]['cc']
 
-                            macro = command
+                                macro = command
 
-                            # Write our command record to the database.
-                            db_cursor.execute('INSERT INTO commands(name, command_code, message_id, macro, symbol ,module) '
-                                              'VALUES (?, ?, ?, ?, ?, ?)',
-                                              (name, command_code, message_id, macro, symbol_id, modules_dict[module_name],))
+                                # Write our command record to the database.
+                                db_cursor.execute('INSERT INTO commands(name, command_code, message_id, macro, symbol ,module) '
+                                                  'VALUES (?, ?, ?, ?, ?, ?)',
+                                                  (name, command_code, message_id, macro, symbol_id, modules_dict[module_name],))
 
 
 def write_event_records(event_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):

@@ -249,18 +249,19 @@ def write_event_records(event_data: dict, modules_dict: dict, db_cursor: sqlite3
     macro = None
 
     for module_name in event_data['modules']:
-        for event in event_data['modules'][module_name]['events']:
-            event_dict = event_data['modules'][module_name]['events'][event]
-            event_id = event_dict['id']
-            event_name = event
+        if 'events' in event_data['modules'][module_name]:
+            for event in event_data['modules'][module_name]['events']:
+                event_dict = event_data['modules'][module_name]['events'][event]
+                event_id = event_dict['id']
+                event_name = event
 
-            # FIXME: Not sure if we'll read the macro in this step of the chain
-            # macro = event_dict['macro']
+                # FIXME: Not sure if we'll read the macro in this step of the chain
+                # macro = event_dict['macro']
 
-            # Write our event record to the database.
-            db_cursor.execute('INSERT INTO events(event_id, name, module) '
-                              'VALUES (?, ?, ?)',
-                              (event_id, event_name, modules_dict[module_name],))
+                # Write our event record to the database.
+                db_cursor.execute('INSERT INTO events(event_id, name, module) '
+                                  'VALUES (?, ?, ?)',
+                                  (event_id, event_name, modules_dict[module_name],))
 
 
 def write_configuration_records(config_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):
@@ -276,17 +277,18 @@ def write_configuration_records(config_data: dict, modules_dict: dict, db_cursor
     value = None
 
     for module_name in config_data['modules']:
-        for config in config_data['modules'][module_name]['config']:
-            config_dict = config_data['modules'][module_name]['config'][config]
-            name = config
-            # FIXME: Not sure if we'll read the macro in step of the chain
-            # macro = event_dict['macro']
-            value = config_dict['value']
+        if 'config' in config_data['modules'][module_name]:
+            for config in config_data['modules'][module_name]['config']:
+                config_dict = config_data['modules'][module_name]['config'][config]
+                name = config
+                # FIXME: Not sure if we'll read the macro in step of the chain
+                # macro = event_dict['macro']
+                value = config_dict['value']
 
-            # Write our event record to the database.
-            db_cursor.execute('INSERT INTO configurations(name, value ,module) '
-                              'VALUES (?, ?, ?)',
-                              (name, value, modules_dict[module_name]))
+                # Write our event record to the database.
+                db_cursor.execute('INSERT INTO configurations(name, value ,module) '
+                                  'VALUES (?, ?, ?)',
+                                  (name, value, modules_dict[module_name]))
 
 
 def write_perf_id_records(perf_id_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):
@@ -303,17 +305,18 @@ def write_perf_id_records(perf_id_data: dict, modules_dict: dict, db_cursor: sql
     perf_id = None
 
     for module_name in perf_id_data['modules']:
-        for perf_name in perf_id_data['modules'][module_name]['perfids']:
-            perf_dict = perf_id_data['modules'][module_name]['perfids'][perf_name]
-            name = perf_name
-            # FIXME: Not sure if we'll read the macro in step of the chain
-            # macro = event_dict['macro']
-            perf_id = perf_dict['id']
+        if 'perf_ids' in perf_id_data['modules'][module_name]:
+            for perf_name in perf_id_data['modules'][module_name]['perfids']:
+                perf_dict = perf_id_data['modules'][module_name]['perfids'][perf_name]
+                name = perf_name
+                # FIXME: Not sure if we'll read the macro in step of the chain
+                # macro = event_dict['macro']
+                perf_id = perf_dict['id']
 
-            # Write our event record to the database.
-            db_cursor.execute('INSERT INTO performance_ids(name, perf_id ,module) '
-                              'VALUES (?, ?, ?)',
-                              (name, perf_id, modules_dict[module_name]))
+                # Write our event record to the database.
+                db_cursor.execute('INSERT INTO performance_ids(name, perf_id ,module) '
+                                  'VALUES (?, ?, ?)',
+                                  (name, perf_id, modules_dict[module_name]))
 
 
 def write_tlm_cmd_data(yaml_data: dict, db_cursor: sqlite3.Cursor):

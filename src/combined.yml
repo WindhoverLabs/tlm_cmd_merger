@@ -231,12 +231,6 @@ core:
         - parent: CFE_ES_AppNameCmd_Payload_t
           member: Application
           type: string
-        - parent: CFE_EVS_Packet_Payload_t
-          member: Message
-          type: string
-        - parent: CFE_EVS_PacketID_t
-          member: AppName
-          type: string
       telemetry:
         CFE_ES_HK_TLM_MID:
           msgID: 0x0800
@@ -626,6 +620,13 @@ core:
       short_name: cfe_evs
       long_name: Core Flight Executive - Event Services
       events: {}
+      msg_def_overrides:
+        - parent: CFE_EVS_Packet_Payload_t
+          member: Message
+          type: string
+        - parent: CFE_EVS_PacketID_t
+          member: AppName
+          type: string
       telemetry:
         CFE_EVS_HK_TLM_MID:
           msgID: 0x0801

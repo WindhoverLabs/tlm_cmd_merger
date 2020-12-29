@@ -12,7 +12,9 @@ def add_tables(db_cursor: sqlite3.Cursor):
     """
     db_cursor.execute('create table if not exists modules('
                       'id INTEGER primary key,'
-                      'name TEXT UNIQUE NOT NULL);')
+                      'name TEXT UNIQUE NOT NULL),'
+                      'FOREIGN KEY (module) REFERENCES modules(id)'
+                      ');')
 
     db_cursor.execute('create table if not exists telemetry('
                       'id INTEGER primary key, '

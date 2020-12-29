@@ -12,8 +12,10 @@ def add_tables(db_cursor: sqlite3.Cursor):
     """
     db_cursor.execute('create table if not exists modules('
                       'id INTEGER primary key,'
-                      'name TEXT UNIQUE NOT NULL),'
-                      'FOREIGN KEY (module) REFERENCES modules(id)'
+                      'name TEXT UNIQUE NOT NULL,'
+                      'parent_module INTEGER,'
+                      'FOREIGN KEY (parent_module) REFERENCES modules(id),'
+                      'UNIQUE (name)'
                       ');')
 
     db_cursor.execute('create table if not exists telemetry('
@@ -71,6 +73,7 @@ def read_yaml(yaml_file: str) -> dict:
     return yaml_data
 
 
+# FIXME:It looks like we don't use this function. We should remove it.
 def get_module_id(module_name: str, db_cursor: sqlite3.Cursor) -> tuple:
     """
     Fetches the id of the module whose name module_name
@@ -325,7 +328,7 @@ def write_tlm_cmd_data(yaml_data: dict, db_cursor: sqlite3.Cursor):
 
     # Get all modules needed now that they are on the database.
     modules_dict = {}
-    for module_id, module_name in db_cursor.execute('select * from modules').fetchall():
+    for module_id, module_name in db_cursor.execute('select id, name from modules').fetchall():
         modules_dict[module_name] = module_id
 
     write_telemetry_records(yaml_data, modules_dict, db_cursor)

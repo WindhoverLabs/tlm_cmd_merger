@@ -124,14 +124,14 @@ def write_module_records(module_data: dict, db_cursor, parent_module: str = None
                 db_cursor.execute('insert into modules(name, parent_module) values(?,?)', (module,get_module_id(parent_module, db_cursor)[0]))
             except sqlite3.IntegrityError:
                 logging.warning(
-                f'The module "{module_name}" was not added. This is most likely due to trying to add it twice'
+                f'The module "{module}" was not added. This is most likely due to trying to add it twice'
                 f' to the datbase. Please revise your configuration file. ')
         else:
             try:
                 db_cursor.execute('insert into modules(name) values(?)', (module,))
             except sqlite3.IntegrityError:
                 logging.warning(
-                f'The module "{module_name}" was not added. This is most likely due to trying to add it twice'
+                f'The module "{module}" was not added. This is most likely due to trying to add it twice'
                 f' to the datbase. Please revise your configuration file. ')
 
         if 'modules' in module_data['modules'][module]:

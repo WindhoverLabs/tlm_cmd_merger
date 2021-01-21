@@ -152,13 +152,13 @@ def write_telemetry_records(telemetry_data: dict, modules_dict: dict, db_cursor:
     macro = None
     symbol_id = None
 
-    if telemetry_data['modules'] == None:
+    if telemetry_data['modules'] is None:
         # This has a 'modules' key, but its empty.  Skip it.
         pass
     else:
         for module_name in telemetry_data['modules']:
             if 'telemetry' in telemetry_data['modules'][module_name]:
-                if telemetry_data['modules'][module_name]['telemetry'] == None:
+                if telemetry_data['modules'][module_name]['telemetry'] is None:
                     # This has a 'telemetry' key, but its empty.  Skip it.
                     pass
                 else:
@@ -167,12 +167,12 @@ def write_telemetry_records(telemetry_data: dict, modules_dict: dict, db_cursor:
                         name = message
 
                         # Check for empty values
-                        if message_dict['msgID'] == None:
-                            print("ERROR: modules." + module_name + ".telemetry." + name + ".msgID must not be empty.  Skipping.")
+                        if message_dict['msgID'] is None:
+                            logging.error(f"modules.{module_name}.telemetry.{name}.msgID must not be empty.  Skipping.")
                             continue
 
-                        if message_dict['struct'] == None:
-                            print("ERROR: modules." + module_name + ".telemetry." + name + ".struct must not be empty.  Skipping.")
+                        if message_dict['struct'] is None:
+                            logging.error(f"modules.{module_name}.telemetry.{name}.struct must not be empty.  Skipping.")
                             continue
 
                         message_id = message_dict['msgID']
@@ -180,7 +180,7 @@ def write_telemetry_records(telemetry_data: dict, modules_dict: dict, db_cursor:
 
                         # If the symbol does not exist, we skip it
                         if not symbol:
-                            print("ERROR: modules." + module_name + ".telemetry." + name + ".struct could not be found.  Skipping.")
+                            logging.error(f"modules.{module_name}.telemetry.{name}.struct could not be found.  Skipping.")
                         else:
                             symbol_id = symbol[0]
 
@@ -224,33 +224,33 @@ def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sql
     :return:
     """
     # This has a modules key, but its empty.  Skip it.
-    if command_data['modules'] == None:
+    if command_data['modules'] is None:
         return
 
     for module_name in command_data['modules']:
         if 'commands' in command_data['modules'][module_name]:
-            if command_data['modules'][module_name]['commands'] == None:
+            if command_data['modules'][module_name]['commands'] is None:
                 # This has a command key, but no commands are defined.  Skip it.
                 continue
 
             for command in command_data['modules'][module_name]['commands']:
                 command_dict = command_data['modules'][module_name]['commands'][command]
 
-                if command_dict['msgID'] == None:
-                    print("ERROR: modules." + module_name + ".commands." + command + ".msgID must not be empty.  Skipping.")
+                if command_dict['msgID'] is None:
+                    logging.error(f"modules.{module_name}.commands.{command}.msgID must not be empty.  Skipping.")
                     continue
 
                 message_id = command_dict['msgID']
 
-                if command_data['modules'][module_name]['commands'] == None:
-                    print("ERROR: modules." + module_name + ".commands." + command + " message does not have any actual commands defined.  Skipping.")
+                if command_data['modules'][module_name]['commands'] is None:
+                    logging.error(f"modules.{module_name}.commands.{command} message does not have any actual commands defined.  Skipping.")
                     continue
 
                 sub_commands = command_data['modules'][module_name]['commands']
 
                 for sub_command in sub_commands[command]['commands']:
-                    if sub_commands[command]['commands'] == None:
-                        print("ERROR: modules." + module_name + ".commands." + command + "." + sub_command + " command is empty.  Skipping.")
+                    if sub_commands[command]['commands'] is None:
+                        logging.error(f"modules.{module_name}.commands.{command}.{sub_command} command is empty.  Skipping.")
                         continue
 
                     sub_command_dict = sub_commands[command]['commands']
@@ -260,12 +260,12 @@ def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sql
 
                     # If the symbol does not exist, we skip it
                     if not symbol:
-                        print("ERROR: modules." + module_name + ".commands." + command + "." + sub_command + "." + sub_command_dict[name]['struct'] + " was not found.  Skipping.")
+                        logging.error(f"modules.{module_name}.commands.{command}.{sub_command}.{sub_command_dict[name]['struct']} was not found.  Skipping.")
                     else:
                         symbol_id = symbol[0]
 
-                        if sub_command_dict[name]['cc'] == None:
-                            print("ERROR: modules." + module_name + ".commands." + command + ".cc must not be empty.  Skipping.")
+                        if sub_command_dict[name]['cc'] is None:
+                            logging.error(f"modules.{module_name}.commands.{command}.cc must not be empty.  Skipping.")
                             continue
 
                         command_code = sub_command_dict[name]['cc']
@@ -318,20 +318,20 @@ def write_event_records(event_data: dict, modules_dict: dict, db_cursor: sqlite3
     macro = None
 
     # This has a modules key, but its empty.  Skip it.
-    if event_data['modules'] == None:
+    if event_data['modules'] is None:
         return
 
     for module_name in event_data['modules']:
         if 'events' in event_data['modules'][module_name]:
-            if event_data['modules'][module_name]['events'] == None:
-                print("ERROR: modules." + module_name + ".events is empty.  Skipping.")
+            if event_data['modules'][module_name]['events'] is None:
+                logging.error(f"modules.{module_name}.events is empty.  Skipping.")
                 continue
 
             for event in event_data['modules'][module_name]['events']:
                 event_dict = event_data['modules'][module_name]['events'][event]
 
-                if event_dict['id'] == None:
-                    print("ERROR: modules." + module_name + ".events." + event + ".id must not be empty.  Skipping.")
+                if event_dict['id'] is None:
+                    logging.error(f"modules.{module_name} .events.{event}.id must not be empty.  Skipping.")
                     continue
 
                 event_id = event_dict['id']
@@ -359,24 +359,24 @@ def write_configuration_records(config_data: dict, modules_dict: dict, db_cursor
     value = None
 
     # This has a modules key, but its empty.  Skip it.
-    if config_data['modules'] == None:
+    if config_data['modules'] is None:
         return
 
     for module_name in config_data['modules']:
         if 'config' in config_data['modules'][module_name]:
-            if config_data['modules'][module_name]['config'] == None:
-                print("ERROR: modules." + module_name + ".config is empty.  Skipping.")
+            if config_data['modules'][module_name]['config'] is None:
+                logging.error(f"modules.{module_name}.config is empty.  Skipping.")
                 continue
 
             for config in config_data['modules'][module_name]['config']:
                 config_dict = config_data['modules'][module_name]['config'][config]
 
-                if config_dict == None:
-                    print("ERROR: modules." + module_name + ".config. " + config + " is empty.  Skipping.")
+                if config_dict is None:
+                    logging.error(f"modules.{module_name}.config.{config} is empty.  Skipping.")
                     continue
 
-                if config_dict['value'] == None:
-                    print("ERROR: modules." + module_name + ".config. " + config + ".value is empty.  Skipping.")
+                if config_dict['value'] is None:
+                    logging.error(f"modules.{module_name}.config.{config}.value is empty.  Skipping.")
                     continue
 
                 name = config
@@ -404,24 +404,24 @@ def write_perf_id_records(perf_id_data: dict, modules_dict: dict, db_cursor: sql
     perf_id = None
 
     # This has a modules key, but its empty.  Skip it.
-    if perf_id_data['modules'] == None:
+    if perf_id_data['modules'] is None:
         return
 
     for module_name in perf_id_data['modules']:
         if 'perf_ids' in perf_id_data['modules'][module_name]:
-            if perf_id_data['modules'][module_name]['perf_ids'] == None:
-                print("ERROR: modules." + module_name + ".perf_ids is empty.  Skipping.")
+            if perf_id_data['modules'][module_name]['perf_ids'] is None:
+                logging.error(f"modules.{module_name}.perf_ids is empty.  Skipping.")
                 continue
 
             for perf_name in perf_id_data['modules'][module_name]['perfids']:
                 perf_dict = perf_id_data['modules'][module_name]['perfids'][perf_name]
 
-                if perf_dict == None:
-                    print("ERROR: modules." + module_name + ".perfids. " + perf_name + " is empty.  Skipping.")
+                if perf_dict is None:
+                    logging.error(f"modules{module_name}.perfids.{perf_name} is empty.  Skipping.")
                     continue
 
-                if perf_dict['id'] == None:
-                    print("ERROR: modules." + module_name + ".perfids. " + perf_name + ".id is empty.  Skipping.")
+                if perf_dict['id'] is None:
+                    logging.error(f"modules.{module_name}.perfids.{perf_name}.id is empty.  Skipping.")
                     continue
 
                 name = perf_name

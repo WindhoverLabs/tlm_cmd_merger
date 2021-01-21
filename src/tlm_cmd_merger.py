@@ -12,7 +12,11 @@ def add_tables(db_cursor: sqlite3.Cursor):
     """
     db_cursor.execute('create table if not exists modules('
                       'id INTEGER primary key,'
-                      'name TEXT UNIQUE NOT NULL);')
+                      'name TEXT UNIQUE NOT NULL,'
+                      'parent_module INTEGER,'
+                      'FOREIGN KEY (parent_module) REFERENCES modules(id),'
+                      'UNIQUE (name)'
+                      ');')
 
     db_cursor.execute('create table if not exists telemetry('
                       'id INTEGER primary key, '
@@ -69,6 +73,7 @@ def read_yaml(yaml_file: str) -> dict:
     return yaml_data
 
 
+# FIXME:It looks like we don't use this function. We should remove it.
 def get_module_id(module_name: str, db_cursor: sqlite3.Cursor) -> tuple:
     """
     Fetches the id of the module whose name module_name
@@ -104,21 +109,33 @@ def get_symbol_id(symbol_name: str, db_cursor: sqlite3.Cursor) -> tuple:
     return symbol_id.fetchone()
 
 
-def write_module_records(module_data: dict, db_cursor: sqlite3.Cursor):
+def write_module_records(module_data: dict, db_cursor, parent_module: str = None):
     """
     Scans module_data and writes each module to the database..
+    :param parent_module:
     :param module_data:
     :param db_cursor:
     :return:
     """
-    if 'core' in module_data:
-        for module in module_data['core']['cfe'].keys():
-            if module != 'config':
-                db_cursor.execute('insert into modules(name) values(?)', (module,))
 
-    for module in module_data['modules'].keys():
-        print(f'current module:{module}')
-        db_cursor.execute('insert into modules(name) values(?)', (module,))
+    for module in module_data['modules']:
+        if parent_module:
+            try:
+                db_cursor.execute('insert into modules(name, parent_module) values(?,?)', (module,get_module_id(parent_module, db_cursor)[0]))
+            except sqlite3.IntegrityError:
+                logging.warning(
+                f'The module "{module}" was not added. This is most likely due to trying to add it twice'
+                f' to the datbase. Please revise your configuration file. ')
+        else:
+            try:
+                db_cursor.execute('insert into modules(name) values(?)', (module,))
+            except sqlite3.IntegrityError:
+                logging.warning(
+                f'The module "{module}" was not added. This is most likely due to trying to add it twice'
+                f' to the datbase. Please revise your configuration file. ')
+
+        if 'modules' in module_data['modules'][module]:
+            write_module_records(module_data['modules'][module], db_cursor, module)
 
 
 def write_telemetry_records(telemetry_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):
@@ -153,7 +170,7 @@ def write_telemetry_records(telemetry_data: dict, modules_dict: dict, db_cursor:
                         if message_dict['msgID'] == None:
                             print("ERROR: modules." + module_name + ".telemetry." + name + ".msgID must not be empty.  Skipping.")
                             continue
-                        
+
                         if message_dict['struct'] == None:
                             print("ERROR: modules." + module_name + ".telemetry." + name + ".struct must not be empty.  Skipping.")
                             continue
@@ -188,13 +205,14 @@ def write_telemetry_records(telemetry_data: dict, modules_dict: dict, db_cursor:
                     if symbol:
                         symbol_id = symbol[0]
 
-                        # FIXME: Not sure if we'll read the macro in this step of the chain
                         macro = name
 
                         # Write our telemetry record to the database.
                         db_cursor.execute('INSERT INTO telemetry(name, message_id, macro, symbol ,module) '
                                           'VALUES (?, ?, ?, ?, ?)',
-                                          (name, message_id, macro, symbol_id, modules_dict[module],))
+                                          (name, message_id, macro, symbol_id, modules_dict[module_name],))
+        if 'modules' in telemetry_data['modules'][module_name]:
+            write_telemetry_records(telemetry_data['modules'][module_name], modules_dict, db_cursor)
 
 
 def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):
@@ -265,7 +283,7 @@ def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sql
                 for command in command_data['core']['cfe'][module_name]['commands']:
                     command_dict = command_data['core']['cfe'][module_name]['commands'][command]
                     message_id = command_dict['msgID']
-                    sub_commands = command_data['core']['cfe'][module_name]['commands']
+                    sub_commands = command_data['modules'][module_name]['commands']
 
                     for sub_command in sub_commands[command]['commands']:
                         sub_command_dict = sub_commands[command]['commands']
@@ -284,6 +302,8 @@ def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sql
                             db_cursor.execute('INSERT INTO commands(name, command_code, message_id, macro, symbol ,module) '
                                               'VALUES (?, ?, ?, ?, ?, ?)',
                                               (name, command_code, message_id, macro, symbol_id, modules_dict[module_name],))
+        if 'modules' in command_data['modules'][module_name]:
+            write_command_records(command_data['modules'][module_name], modules_dict, db_cursor)
 
 
 def write_event_records(event_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):
@@ -350,11 +370,11 @@ def write_configuration_records(config_data: dict, modules_dict: dict, db_cursor
 
             for config in config_data['modules'][module_name]['config']:
                 config_dict = config_data['modules'][module_name]['config'][config]
-            
+
                 if config_dict == None:
                     print("ERROR: modules." + module_name + ".config. " + config + " is empty.  Skipping.")
                     continue
-            
+
                 if config_dict['value'] == None:
                     print("ERROR: modules." + module_name + ".config. " + config + ".value is empty.  Skipping.")
                     continue
@@ -395,11 +415,11 @@ def write_perf_id_records(perf_id_data: dict, modules_dict: dict, db_cursor: sql
 
             for perf_name in perf_id_data['modules'][module_name]['perfids']:
                 perf_dict = perf_id_data['modules'][module_name]['perfids'][perf_name]
-            
+
                 if perf_dict == None:
                     print("ERROR: modules." + module_name + ".perfids. " + perf_name + " is empty.  Skipping.")
                     continue
-            
+
                 if perf_dict['id'] == None:
                     print("ERROR: modules." + module_name + ".perfids. " + perf_name + ".id is empty.  Skipping.")
                     continue
@@ -420,7 +440,7 @@ def write_tlm_cmd_data(yaml_data: dict, db_cursor: sqlite3.Cursor):
 
     # Get all modules needed now that they are on the database.
     modules_dict = {}
-    for module_id, module_name in db_cursor.execute('select * from modules').fetchall():
+    for module_id, module_name in db_cursor.execute('select id, name from modules').fetchall():
         modules_dict[module_name] = module_id
 
     write_telemetry_records(yaml_data, modules_dict, db_cursor)

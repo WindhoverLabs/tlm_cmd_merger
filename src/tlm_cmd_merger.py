@@ -25,6 +25,7 @@ def add_tables(db_cursor: sqlite3.Cursor):
                       'macro TEXT,'
                       'symbol INTEGER NOT NULL, '
                       'module INTEGER NOT NULL,'
+                      'min_rate INTEGER,'
                       'FOREIGN KEY (symbol) REFERENCES symbols(id), '
                       'FOREIGN KEY (module) REFERENCES modules(id),'
                       'UNIQUE (name, message_id, module)'
@@ -121,18 +122,19 @@ def write_module_records(module_data: dict, db_cursor, parent_module: str = None
     for module in module_data['modules']:
         if parent_module:
             try:
-                db_cursor.execute('insert into modules(name, parent_module) values(?,?)', (module,get_module_id(parent_module, db_cursor)[0]))
+                db_cursor.execute('insert into modules(name, parent_module) values(?,?)',
+                                  (module, get_module_id(parent_module, db_cursor)[0]))
             except sqlite3.IntegrityError:
                 logging.warning(
-                f'The module "{module}" was not added. This is most likely due to trying to add it twice'
-                f' to the datbase. Please revise your configuration file. ')
+                    f'The module "{module}" was not added. This is most likely due to trying to add it twice'
+                    f' to the datbase. Please revise your configuration file. ')
         else:
             try:
                 db_cursor.execute('insert into modules(name) values(?)', (module,))
             except sqlite3.IntegrityError:
                 logging.warning(
-                f'The module "{module}" was not added. This is most likely due to trying to add it twice'
-                f' to the datbase. Please revise your configuration file. ')
+                    f'The module "{module}" was not added. This is most likely due to trying to add it twice'
+                    f' to the datbase. Please revise your configuration file. ')
 
         if 'modules' in module_data['modules'][module]:
             write_module_records(module_data['modules'][module], db_cursor, module)
@@ -162,21 +164,30 @@ def write_telemetry_records(telemetry_data: dict, modules_dict: dict, db_cursor:
                         symbol = None
                         message_dict = telemetry_data['modules'][module_name]['telemetry'][message]
                         name = message
+                        min_rate = None
 
                         # Check for empty values
                         # FIXME: This logic is starting to look convoluted. The schema might help with this.
                         if 'msgID' in message_dict:
                             if message_dict['msgID'] is None:
-                                logging.error(f"modules.{module_name}.telemetry.{name}.msgID must not be empty. Skipping.")
+                                logging.error(
+                                    f"modules.{module_name}.telemetry.{name}.msgID must not be empty. Skipping.")
                                 continue
                             else:
                                 message_id = message_dict['msgID']
                         else:
                             logging.error(f"modules.{module_name}.telemetry.{name}.msgID key must exist.  Skipping.")
-                        
+
+                        if 'min_rate' in message_dict:
+                            if message_dict['min_rate'] is None:
+                                continue
+                            else:
+                                min_rate = message_dict['min_rate']
+
                         if 'struct' in message_dict:
                             if message_dict['struct'] is None:
-                                logging.error(f"modules.{module_name}.telemetry.{name}.struct must not be empty. Skipping.")
+                                logging.error(
+                                    f"modules.{module_name}.telemetry.{name}.struct must not be empty. Skipping.")
                                 continue
                             else:
                                 symbol = get_symbol_id(message_dict['struct'], db_cursor)
@@ -185,7 +196,8 @@ def write_telemetry_records(telemetry_data: dict, modules_dict: dict, db_cursor:
 
                         # If the symbol does not exist, we skip it
                         if symbol is None:
-                            logging.error(f"modules.{module_name}.telemetry.{name}.struct could not be found.  Skipping.")
+                            logging.error(
+                                f"modules.{module_name}.telemetry.{name}.struct could not be found.  Skipping.")
                         else:
                             symbol_id = symbol[0]
 
@@ -193,9 +205,10 @@ def write_telemetry_records(telemetry_data: dict, modules_dict: dict, db_cursor:
                             macro = name
 
                             # Write our telemetry record to the database.
-                            db_cursor.execute('INSERT INTO telemetry(name, message_id, macro, symbol ,module) '
-                                          'VALUES (?, ?, ?, ?, ?)',
-                                          (name, message_id, macro, symbol_id, modules_dict[module_name],))
+                            db_cursor.execute(
+                                'INSERT INTO telemetry(name, message_id, macro, symbol, module, min_rate) '
+                                'VALUES (?, ?, ?, ?, ?, ?)',
+                                (name, message_id, macro, symbol_id, modules_dict[module_name], min_rate))
 
             if 'modules' in telemetry_data['modules'][module_name]:
                 write_telemetry_records(telemetry_data['modules'][module_name], modules_dict, db_cursor)
@@ -214,7 +227,7 @@ def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sql
         return
 
     for module_name in command_data['modules']:
-        #FIXME: We need that schema. If we had the schema, we wouldn't need all these checks and the code would look cleaner.
+        # FIXME: We need that schema. If we had the schema, we wouldn't need all these checks and the code would look cleaner.
         if 'commands' in command_data['modules'][module_name]:
             if command_data['modules'][module_name]['commands'] is None:
                 # This has a command key, but no commands are defined.  Skip it.
@@ -230,19 +243,22 @@ def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sql
                 message_id = command_dict['msgID']
 
                 if message_id is None:
-                    logging.error(f"modules.{module_name}.commands.{command} message does not have any msgID defined. Skipping.")
+                    logging.error(
+                        f"modules.{module_name}.commands.{command} message does not have any msgID defined. Skipping.")
                     continue
 
                 if command_data['modules'][module_name]['commands'] is None:
-                    logging.error(f"modules.{module_name}.commands.{command} message does not have any actual commands defined.  Skipping.")
+                    logging.error(
+                        f"modules.{module_name}.commands.{command} message does not have any actual commands defined.  Skipping.")
                     continue
 
                 sub_commands = command_data['modules'][module_name]['commands']
-                
+
                 if 'commands' in sub_commands[command]:
                     for sub_command in sub_commands[command]['commands']:
                         if sub_commands[command]['commands'] is None:
-                            logging.error(f"modules.{module_name}.commands.{command}.{sub_command} command is empty.  Skipping.")
+                            logging.error(
+                                f"modules.{module_name}.commands.{command}.{sub_command} command is empty.  Skipping.")
                             continue
 
                         sub_command_dict = sub_commands[command]['commands']
@@ -252,12 +268,14 @@ def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sql
 
                         # If the symbol does not exist, we skip it
                         if not symbol:
-                            logging.error(f"modules.{module_name}.commands.{command}.{sub_command}.{sub_command_dict[name]['struct']} was not found.  Skipping.")
+                            logging.error(
+                                f"modules.{module_name}.commands.{command}.{sub_command}.{sub_command_dict[name]['struct']} was not found.  Skipping.")
                         else:
                             symbol_id = symbol[0]
 
                             if sub_command_dict[name]['cc'] is None:
-                                logging.error(f"modules.{module_name}.commands.{command}.cc must not be empty.  Skipping.")
+                                logging.error(
+                                    f"modules.{module_name}.commands.{command}.cc must not be empty.  Skipping.")
                                 continue
 
                             command_code = sub_command_dict[name]['cc']
@@ -265,9 +283,10 @@ def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sql
                             macro = command
 
                             # Write our command record to the database.
-                            db_cursor.execute('INSERT INTO commands(name, command_code, message_id, macro, symbol ,module) '
-                                          'VALUES (?, ?, ?, ?, ?, ?)',
-                                          (name, command_code, message_id, macro, symbol_id, modules_dict[module_name],))
+                            db_cursor.execute(
+                                'INSERT INTO commands(name, command_code, message_id, macro, symbol ,module) '
+                                'VALUES (?, ?, ?, ?, ?, ?)',
+                                (name, command_code, message_id, macro, symbol_id, modules_dict[module_name],))
 
         if 'modules' in command_data['modules'][module_name]:
             write_command_records(command_data['modules'][module_name], modules_dict, db_cursor)

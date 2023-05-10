@@ -71,7 +71,8 @@ def add_tables(db_cursor: sqlite3.Cursor):
                       'id INTEGER primary key,'
                       'name TEXT NOT NULL,'
                       'language TEXT NOT NULL,'
-                      'script_path TEXT NOT NULL,'
+                      'script_path TEXT,'
+                      'type TEXT,'
                       'module INTEGER NOT NULL,'
                       'FOREIGN KEY (module) REFERENCES modules(id),'
                       'UNIQUE (name, module));')
@@ -79,22 +80,27 @@ def add_tables(db_cursor: sqlite3.Cursor):
     db_cursor.execute('create table if not exists algorithm_triggers('
                       'id INTEGER primary key,'
                       'parameter_ref INTEGER NOT NULL,'
-                      'module INTEGER NOT NULL,'
                       'algorithm INTEGER NOT NULL,'
-                      'FOREIGN KEY (module) REFERENCES modules(id),'
                       'FOREIGN KEY (parameter_ref) REFERENCES telemetry(id),'
                       'FOREIGN KEY (algorithm) REFERENCES algorithms(id),'
-                      'UNIQUE (parameter_ref, module, algorithm));')
+                      'UNIQUE (parameter_ref, algorithm));')
 
     db_cursor.execute('create table if not exists algorithm_inputs('
                       'id INTEGER primary key,'
-                      'parameter_ref INTEGER NOT NULL,'
-                      'module INTEGER NOT NULL,'
+                      'parameter_ref TEXT NOT NULL,'
+                      'input_name TEXT NOT NULL,'
                       'algorithm INTEGER NOT NULL,'
-                      'FOREIGN KEY (module) REFERENCES modules(id),'
-                      'FOREIGN KEY (parameter_ref) REFERENCES telemetry(id),'
                       'FOREIGN KEY (algorithm) REFERENCES algorithms(id),'
-                      'UNIQUE (parameter_ref, module, algorithm));')
+                      'UNIQUE (parameter_ref, algorithm));')
+
+    db_cursor.execute('create table if not exists algorithm_outputs('
+                      'id INTEGER primary key,'
+                      'parameter_name TEXT NOT NULL,'
+                      'description TEXT NOT NULL,'
+                      'algorithm INTEGER NOT NULL,'
+                      # 'type' Might be able to just create types on the fly and just add them to the symbols table, watch namespaces!!!!
+                      'FOREIGN KEY (algorithm) REFERENCES algorithms(id),'
+                      'UNIQUE (parameter_name, algorithm));')
 
 
 def read_yaml(yaml_file: str) -> dict:
@@ -241,6 +247,161 @@ def write_telemetry_records(telemetry_data: dict, modules_dict: dict, db_cursor:
 
             if 'modules' in telemetry_data['modules'][module_name]:
                 write_telemetry_records(telemetry_data['modules'][module_name], modules_dict, db_cursor)
+
+
+def write_algorithm_triggers_records(algorithm_data: dict,
+                                     algorithms_dict: dict,
+                                     telemetry_dict: dict,
+                                     db_cursor: sqlite3.Cursor):
+    """
+    Scans algorithm_data and writes it to the database. Please note that the database changes are not committed. Thus
+    it is the responsibility of the caller to commit these changes to the database.
+    :param algorithm_data:
+    :param db_cursor:
+    :param modules_dict: A dictionary of the form {module_id: module_name}
+    :return:
+    """
+    if algorithm_data['modules'] is None:
+        # This has a 'modules' key, but its empty.  Skip it.
+        pass
+    else:
+        for module_name in algorithm_data['modules']:
+            if 'algorithms' in algorithm_data['modules'][module_name]:
+                if algorithm_data['modules'][module_name]['algorithms'] is None:
+                    # This has a 'algorithms' key, but its empty.  Skip it.
+                    pass
+                else:
+                    for algorithm in algorithm_data['modules'][module_name]['algorithms']:
+                        for trigger in algorithm_data['modules'][module_name]['algorithms'][algorithm]['triggers']:
+                            parameter_ref = trigger['parameter_ref']
+                            # Write our telemetry record to the database.
+                            db_cursor.execute(
+                                'INSERT INTO algorithm_triggers(parameter_ref, algorithm) '
+                                'VALUES (?, ?)',
+                                (telemetry_dict[parameter_ref], algorithms_dict[algorithm]))
+
+            if 'modules' in algorithm_data['modules'][module_name]:
+                write_algorithm_triggers_records(algorithm_data['modules'][module_name],
+                                                 algorithms_dict,
+                                                 telemetry_dict,
+                                                 db_cursor)
+
+
+def write_algorithm_inputs_records(algorithm_data: dict,
+                                   algorithms_dict: dict,
+                                   db_cursor: sqlite3.Cursor):
+    """
+    Scans algorithm_data and writes it to the database. Please note that the database changes are not committed. Thus
+    it is the responsibility of the caller to commit these changes to the database.
+    :param algorithm_data:
+    :param db_cursor:
+    :param modules_dict: A dictionary of the form {module_id: module_name}
+    :return:
+    """
+    if algorithm_data['modules'] is None:
+        # This has a 'modules' key, but its empty.  Skip it.
+        pass
+    else:
+        for module_name in algorithm_data['modules']:
+            if 'algorithms' in algorithm_data['modules'][module_name]:
+                if algorithm_data['modules'][module_name]['algorithms'] is None:
+                    # This has a 'algorithms' key, but its empty.  Skip it.
+                    pass
+                else:
+                    for algorithm in algorithm_data['modules'][module_name]['algorithms']:
+                        for input in algorithm_data['modules'][module_name]['algorithms'][algorithm]['inputs']:
+                            parameter_ref = input['parameter_ref']
+                            input_name = input['input_name']
+                            # Write our telemetry record to the database.
+                            db_cursor.execute(
+                                'INSERT INTO algorithm_inputs(parameter_ref, input_name, algorithm) '
+                                'VALUES (?, ?, ?)',
+                                (parameter_ref, input_name, algorithms_dict[algorithm]))
+
+            if 'modules' in algorithm_data['modules'][module_name]:
+                write_algorithm_inputs_records(algorithm_data['modules'][module_name],
+                                                 algorithms_dict,
+                                                 db_cursor)
+
+
+
+
+def write_algorithm_outputs_records(algorithm_data: dict,
+                                   algorithms_dict: dict,
+                                   db_cursor: sqlite3.Cursor):
+    """
+    Scans algorithm_data and writes it to the database. Please note that the database changes are not committed. Thus
+    it is the responsibility of the caller to commit these changes to the database.
+    :param algorithm_data:
+    :param db_cursor:
+    :param modules_dict: A dictionary of the form {module_id: module_name}
+    :return:
+    """
+    if algorithm_data['modules'] is None:
+        # This has a 'modules' key, but its empty.  Skip it.
+        pass
+    else:
+        for module_name in algorithm_data['modules']:
+            if 'algorithms' in algorithm_data['modules'][module_name]:
+                if algorithm_data['modules'][module_name]['algorithms'] is None:
+                    # This has a 'algorithms' key, but its empty.  Skip it.
+                    pass
+                else:
+                    for algorithm in algorithm_data['modules'][module_name]['algorithms']:
+                        for input in algorithm_data['modules'][module_name]['algorithms'][algorithm]['inputs']:
+                            parameter_ref = input['parameter_ref']
+                            input_name = input['input_name']
+                            # Write our telemetry record to the database.
+                            db_cursor.execute(
+                                'INSERT INTO algorithm_inputs(parameter_ref, input_name, algorithm) '
+                                'VALUES (?, ?, ?)',
+                                (parameter_ref, input_name, algorithms_dict[algorithm]))
+
+            if 'modules' in algorithm_data['modules'][module_name]:
+                write_algorithm_inputs_records(algorithm_data['modules'][module_name],
+                                                 algorithms_dict,
+                                                 db_cursor)
+
+
+
+def write_algorithm_records(algorithm_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):
+    """
+    Scans algorithm_data and writes it to the database. Please note that the database changes are not committed. Thus
+    it is the responsibility of the caller to commit these changes to the database.
+    :param algorithm_data:
+    :param db_cursor:
+    :param modules_dict: A dictionary of the form {module_id: module_name}
+    :return:
+    """
+    if algorithm_data['modules'] is None:
+        # This has a 'modules' key, but its empty.  Skip it.
+        pass
+    else:
+        for module_name in algorithm_data['modules']:
+            if 'algorithms' in algorithm_data['modules'][module_name]:
+                if algorithm_data['modules'][module_name]['algorithms'] is None:
+                    # This has a 'algorithms' key, but its empty.  Skip it.
+                    pass
+                else:
+                    for algorithm in algorithm_data['modules'][module_name]['algorithms']:
+                        name = algorithm_data['modules'][module_name]['algorithms'][algorithm]['name']
+                        type = algorithm_data['modules'][module_name]['algorithms'][algorithm]['type']
+                        if not (type in ['custom']):
+                            logging.error(
+                                f"modules.{module_name}.algorithms.type must be in the supported list{['custom']}. "
+                                f"Skipping.")
+                            continue
+                        language = algorithm_data['modules'][module_name]['algorithms'][algorithm]['script']['language']
+                        script_path = algorithm_data['modules'][module_name]['algorithms'][algorithm]['script']['path']
+
+                        # Write our telemetry record to the database.
+                        db_cursor.execute(
+                            'INSERT INTO algorithms(name, language, script_path, type, module) '
+                            'VALUES (?, ?, ?, ?, ?)',
+                            (name, language, script_path, type, modules_dict[module_name]))
+
+            if 'modules' in algorithm_data['modules'][module_name]:
+                write_algorithm_records(algorithm_data['modules'][module_name], modules_dict, db_cursor)
 
 
 def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):
@@ -463,15 +624,31 @@ def write_tlm_cmd_data(yaml_data: dict, db_cursor: sqlite3.Cursor):
         modules_dict[module_name] = module_id
 
     write_telemetry_records(yaml_data, modules_dict, db_cursor)
+
+    telemetry_dict = {}
+    for tlm_id, tlm_name in db_cursor.execute('select id, name from telemetry').fetchall():
+        telemetry_dict[tlm_name] = tlm_id
+
     write_command_records(yaml_data, modules_dict, db_cursor)
     write_event_records(yaml_data, modules_dict, db_cursor)
     write_configuration_records(yaml_data, modules_dict, db_cursor)
     write_perf_id_records(yaml_data, modules_dict, db_cursor)
 
+    write_algorithm_records(yaml_data, modules_dict, db_cursor)
+
+    # Get all algorithms needed now that they are on the database.
+    algorithms_dict = {}
+    for algorithm_id, algorithm_name in db_cursor.execute('select id, name from algorithms').fetchall():
+        algorithms_dict[algorithm_name] = algorithm_id
+
+    write_algorithm_triggers_records(yaml_data, algorithms_dict, telemetry_dict, db_cursor)
+
+    write_algorithm_inputs_records(yaml_data, algorithms_dict, db_cursor)
+
 
 def parse_cli() -> argparse.Namespace:
     """
-    Parses cli argyments.
+    Parses cli arguments.
     :return: The namespace that has all of the arguments that have been parsed.
     """
     parser = argparse.ArgumentParser(description='Takes in paths to yaml file and sqlite database.')

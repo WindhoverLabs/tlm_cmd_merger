@@ -67,6 +67,35 @@ def add_tables(db_cursor: sqlite3.Cursor):
                       'FOREIGN KEY (module) REFERENCES modules(id),'
                       'UNIQUE (name, perf_id, module));')
 
+    db_cursor.execute('create table if not exists algorithms('
+                      'id INTEGER primary key,'
+                      'name TEXT NOT NULL,'
+                      'language TEXT NOT NULL,'
+                      'script_path TEXT NOT NULL,'
+                      'module INTEGER NOT NULL,'
+                      'FOREIGN KEY (module) REFERENCES modules(id),'
+                      'UNIQUE (name, module));')
+
+    db_cursor.execute('create table if not exists algorithm_triggers('
+                      'id INTEGER primary key,'
+                      'parameter_ref INTEGER NOT NULL,'
+                      'module INTEGER NOT NULL,'
+                      'algorithm INTEGER NOT NULL,'
+                      'FOREIGN KEY (module) REFERENCES modules(id),'
+                      'FOREIGN KEY (parameter_ref) REFERENCES telemetry(id),'
+                      'FOREIGN KEY (algorithm) REFERENCES algorithms(id),'
+                      'UNIQUE (parameter_ref, module, algorithm));')
+
+    db_cursor.execute('create table if not exists algorithm_inputs('
+                      'id INTEGER primary key,'
+                      'parameter_ref INTEGER NOT NULL,'
+                      'module INTEGER NOT NULL,'
+                      'algorithm INTEGER NOT NULL,'
+                      'FOREIGN KEY (module) REFERENCES modules(id),'
+                      'FOREIGN KEY (parameter_ref) REFERENCES telemetry(id),'
+                      'FOREIGN KEY (algorithm) REFERENCES algorithms(id),'
+                      'UNIQUE (parameter_ref, module, algorithm));')
+
 
 def read_yaml(yaml_file: str) -> dict:
     yaml_data = yaml.load(open(yaml_file, 'r'),

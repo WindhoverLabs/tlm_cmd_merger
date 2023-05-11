@@ -80,9 +80,8 @@ def add_tables(db_cursor: sqlite3.Cursor):
 
     db_cursor.execute('create table if not exists algorithm_triggers('
                       'id INTEGER primary key,'
-                      'parameter_ref INTEGER NOT NULL,'
+                      'parameter_ref TEXT NOT NULL,'
                       'algorithm INTEGER NOT NULL,'
-                      'FOREIGN KEY (parameter_ref) REFERENCES telemetry(id),'
                       'FOREIGN KEY (algorithm) REFERENCES algorithms(id),'
                       'UNIQUE (parameter_ref, algorithm));')
 
@@ -298,7 +297,7 @@ def write_algorithm_triggers_records(algorithm_data: dict,
                             db_cursor.execute(
                                 'INSERT INTO algorithm_triggers(parameter_ref, algorithm) '
                                 'VALUES (?, ?)',
-                                (telemetry_dict[parameter_ref], algorithms_dict[algorithm]))
+                                (parameter_ref, algorithms_dict[algorithm]))
 
             if 'modules' in algorithm_data['modules'][module_name]:
                 write_algorithm_triggers_records(algorithm_data['modules'][module_name],
@@ -765,6 +764,7 @@ def write_tlm_cmd_data(yaml_data: dict, db_cursor: sqlite3.Cursor):
     write_algorithm_records(yaml_data, modules_dict, db_cursor)
 
     # Get all algorithms needed now that they are on the database.
+    # TODO:Add error-checking for these algorithm functions.
     algorithms_dict = {}
     for algorithm_id, algorithm_name in db_cursor.execute('select id, name from algorithms').fetchall():
         algorithms_dict[algorithm_name] = algorithm_id

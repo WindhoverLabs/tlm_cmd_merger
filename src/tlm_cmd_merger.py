@@ -2,6 +2,7 @@ import sqlite3
 import argparse
 import yaml
 import logging
+from pathlib import Path
 
 
 def add_tables(db_cursor: sqlite3.Cursor):
@@ -471,7 +472,10 @@ def write_algorithm_records(algorithm_data: dict, modules_dict: dict, db_cursor:
                                 f"Skipping.")
                             continue
                         language = algorithm_data['modules'][module_name]['algorithms'][algorithm]['script']['language']
-                        script_path = algorithm_data['modules'][module_name]['algorithms'][algorithm]['script']['path']
+
+                        script_path = str(Path(algorithm_data['modules'][module_name]['algorithms'][algorithm]['script']['path']).resolve())
+
+
 
                         # Write our telemetry record to the database.
                         db_cursor.execute(

@@ -96,13 +96,14 @@ def add_tables(db_cursor: sqlite3.Cursor):
 
     db_cursor.execute('create table if not exists algorithm_outputs('
                       'id INTEGER primary key,'
-                      'parameter_name TEXT NOT NULL,'
+                      'parameter_ref TEXT NOT NULL,'
+                      'output_name TEXT NOT NULL,'
                       'description TEXT NOT NULL,'
                       'algorithm INTEGER NOT NULL,'
                       'type INTEGER NOT NULL,'
                       'FOREIGN KEY (algorithm) REFERENCES algorithms(id),'
                       'FOREIGN KEY (type) REFERENCES symbols(id),'
-                      'UNIQUE (parameter_name, algorithm));')
+                      'UNIQUE (parameter_ref, algorithm));')
 
     # db_cursor.execute('create table if not exists algorithm_aggregates('
     #                   'id INTEGER primary key,'
@@ -370,9 +371,11 @@ def write_algorithm_outputs_records(algorithm_data: dict,
                             parameter_name = output['parameter']['name']
                             description = output['parameter']['description']
                             p_type_name = output['parameter']['type']
+                            new_type_name = p_type_name
                             p_type = 0
                             if p_type_name in symbols_dict:
                                 p_type = symbols_dict[p_type_name]
+                                continue
                             else:
                                 if p_type_name != 'aggregate':
                                     logging.error(f"type '{p_type} must be either'"
@@ -399,7 +402,7 @@ def write_algorithm_outputs_records(algorithm_data: dict,
                                 if new_type_name in symbols_dict:
                                     logging.warning(f"Reusing the algorithms type '{new_type_name}'")
                                     p_type = symbols_dict[new_type_name]
-                                    continue
+
 
                                 # At the moment only flat aggregates are supported
                                 else:
@@ -433,9 +436,9 @@ def write_algorithm_outputs_records(algorithm_data: dict,
 
                             # Write our algorithm_outputs record to the database.
                             db_cursor.execute(
-                                'INSERT INTO algorithm_outputs(parameter_name, description, algorithm, type) '
-                                'VALUES (?, ?, ?, ?)',
-                                (parameter_name, description, algorithms_dict[algorithm], p_type))
+                                'INSERT INTO algorithm_outputs(parameter_ref, output_name, description, algorithm, type) '
+                                'VALUES (?, ?, ?, ?, ?)',
+                                (new_type_name, parameter_name, description, algorithms_dict[algorithm], p_type))
 
             if 'modules' in algorithm_data['modules'][module_name]:
                 write_algorithm_outputs_records(algorithm_data['modules'][module_name],

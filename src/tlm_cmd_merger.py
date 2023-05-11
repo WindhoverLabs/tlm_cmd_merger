@@ -98,9 +98,27 @@ def add_tables(db_cursor: sqlite3.Cursor):
                       'parameter_name TEXT NOT NULL,'
                       'description TEXT NOT NULL,'
                       'algorithm INTEGER NOT NULL,'
-                      # 'type' Might be able to just create types on the fly and just add them to the symbols table, watch namespaces!!!!
+                      'type INTEGER NOT NULL,'
                       'FOREIGN KEY (algorithm) REFERENCES algorithms(id),'
+                      'FOREIGN KEY (type) REFERENCES symbols(id),'
                       'UNIQUE (parameter_name, algorithm));')
+
+    # db_cursor.execute('create table if not exists algorithm_aggregates('
+    #                   'id INTEGER primary key,'
+    #                   'name TEXT NOT NULL,'
+    #                   'algorithm INTEGER NOT NULL,'
+    #                   'FOREIGN KEY (algorithm) REFERENCES algorithms(id),'
+    #                   'UNIQUE (name, algorithm));')
+    #
+    # db_cursor.execute('create table if not exists algorithm_aggregates_fields('
+    #                   'id INTEGER primary key,'
+    #                   'name TEXT NOT NULL,'
+    #                   'type TEXT NOT NULL,'
+    #                   'algorithm INTEGER NOT NULL,'
+    #                   'FOREIGN KEY (algorithm) REFERENCES algorithms(id),'
+    #                   'FOREIGN KEY (type) REFERENCES algorithm_aggregates(id),'
+    #                   'UNIQUE (name, algorithm));')
+
 
 
 def read_yaml(yaml_file: str) -> dict:
@@ -320,15 +338,14 @@ def write_algorithm_inputs_records(algorithm_data: dict,
 
             if 'modules' in algorithm_data['modules'][module_name]:
                 write_algorithm_inputs_records(algorithm_data['modules'][module_name],
-                                                 algorithms_dict,
-                                                 db_cursor)
-
-
+                                               algorithms_dict,
+                                               db_cursor)
 
 
 def write_algorithm_outputs_records(algorithm_data: dict,
-                                   algorithms_dict: dict,
-                                   db_cursor: sqlite3.Cursor):
+                                    algorithms_dict: dict,
+                                    symbols_dict: dict,
+                                    db_cursor: sqlite3.Cursor):
     """
     Scans algorithm_data and writes it to the database. Please note that the database changes are not committed. Thus
     it is the responsibility of the caller to commit these changes to the database.
@@ -348,20 +365,82 @@ def write_algorithm_outputs_records(algorithm_data: dict,
                     pass
                 else:
                     for algorithm in algorithm_data['modules'][module_name]['algorithms']:
-                        for input in algorithm_data['modules'][module_name]['algorithms'][algorithm]['inputs']:
-                            parameter_ref = input['parameter_ref']
-                            input_name = input['input_name']
-                            # Write our telemetry record to the database.
+                        for output in algorithm_data['modules'][module_name]['algorithms'][algorithm]['outputs']:
+                            parameter_name = output['parameter']['name']
+                            description = output['parameter']['description']
+                            p_type_name = output['parameter']['type']
+                            p_type = 0
+                            if p_type_name in symbols_dict:
+                                p_type = symbols_dict[p_type_name]
+                            else:
+                                if p_type_name != 'aggregate':
+                                    logging.error(f"type '{p_type} must be either'"
+                                                  f" an intrinsic type:[int64, "
+                                                  f"int32, "
+                                                  f"int16, "
+                                                  f"int8, "
+                                                  f"int, "
+                                                  f"uint8, "
+                                                  f"uint16, "
+                                                  f"uint32, "
+                                                  f"unsigned int, "
+                                                  f"unsigned, "
+                                                  f"uint,"
+                                                  f" char, "
+                                                  f"boolean, "
+                                                  f"float, "
+                                                  f"double, "
+                                                  f"string] or 'aggregate'")
+                                    continue
+
+                                new_type_name = module_name+ '_' + p_type_name + "_t"
+                                new_type_byte_size = 0
+                                if new_type_name in symbols_dict:
+                                    logging.warning(f"Reusing the algorithms type '{new_type_name}'")
+                                    p_type = symbols_dict[new_type_name]
+                                    continue
+
+                                # At the moment only flat aggregates are supported
+                                else:
+                                    for member in output['parameter']['members']:
+                                        symbol_id = symbols_dict[member['type']]
+                                        member_size = db_cursor.execute('select byte_size from symbols where id=?', (symbol_id,)).fetchone()
+                                        new_type_byte_size += member_size[0]
+                                elf = -1 # This symbol does not really have an elf...need to figure out if this is the best way to do this.
+
+                                # Write our event record to the database.
+                                db_cursor.execute('INSERT INTO symbols(elf, name, byte_size) '
+                                                  'VALUES (?, ?, ?)',
+                                                  (elf, new_type_name, new_type_byte_size))
+
+                                p_type = db_cursor.execute('select id from symbols where name=?', (new_type_name,)).fetchone()[0]
+
+                                current_member_offset = 0
+                                for member in output['parameter']['members']:
+                                    member_name = member['name']
+                                    member_type = member['type']
+                                    symbol_id = db_cursor.execute('select id from symbols where name=?', (member_type,)).fetchone()[0]
+                                    member_size = db_cursor.execute('select byte_size from symbols where id=?',
+                                                                    (symbol_id,)).fetchone()
+
+                                    db_cursor.execute('INSERT INTO fields(symbol, name, byte_offset, type, '
+                                                      'little_endian, bit_size, bit_offset)'
+                                                      'VALUES (?, ?, ?, ?, ?, ?, ?)',
+                                                      (symbol_id, member_name, current_member_offset, symbol_id, 0, 0, 0))
+
+                                    current_member_offset += member_size[0]
+
+                            # Write our algorithm_outputs record to the database.
                             db_cursor.execute(
-                                'INSERT INTO algorithm_inputs(parameter_ref, input_name, algorithm) '
-                                'VALUES (?, ?, ?)',
-                                (parameter_ref, input_name, algorithms_dict[algorithm]))
+                                'INSERT INTO algorithm_outputs(parameter_name, description, algorithm, type) '
+                                'VALUES (?, ?, ?, ?)',
+                                (parameter_name, description, algorithms_dict[algorithm], p_type))
 
             if 'modules' in algorithm_data['modules'][module_name]:
-                write_algorithm_inputs_records(algorithm_data['modules'][module_name],
-                                                 algorithms_dict,
-                                                 db_cursor)
-
+                write_algorithm_outputs_records(algorithm_data['modules'][module_name],
+                                                algorithms_dict,
+                                                symbols_dict,
+                                                db_cursor)
 
 
 def write_algorithm_records(algorithm_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):
@@ -615,6 +694,48 @@ def write_perf_id_records(perf_id_data: dict, modules_dict: dict, db_cursor: sql
                                   (name, perf_id, modules_dict[module_name]))
 
 
+def __is_base_type(type_name: str) -> tuple:
+    """
+    Checks if type_name is a base type as it appears in the database.
+    :return: A tuple of the form (bool, str), where the bool is whether this is a basetype or not and what the
+    base type maps to in our BaseType namespace. Please note that this function does not pre-append the BaseType
+    namespace to the type, that is the responsibility of the caller. Please note that padding types are also
+    considered base types. Padding types have the form of _padding[Number Of Bits] such as _padding8.
+
+    NOTE:While strings are considered a base type, it should be noted that, as opposed to all of the other base types,
+    they are created as needed. This is because we can't really predict their sizes, like we do
+    ints, not even a range as a string could be of any size. Thus they are created on the fly.
+    """
+    out_base_type = (False, '')
+
+    if type_name == 'int64' \
+            or type_name == 'int32' \
+            or type_name == 'int16' \
+            or type_name == 'int8' \
+            or type_name == 'int':
+        out_base_type = (True, 'int')
+    elif type_name == 'uint8' \
+            or type_name == 'uint16' \
+            or type_name == 'uint32' \
+            or type_name == 'unsigned int' \
+            or type_name == 'unsigned' \
+            or type_name == 'uint64':
+        out_base_type = (True, 'uint')
+    # FIXME: char types need to be handled properly
+    elif type_name == 'char':
+        out_base_type = (True, 'int')
+    elif type_name == 'boolean':
+        out_base_type = (True, 'boolean')
+    elif type_name == 'float' or type_name == 'double':
+        out_base_type = (True, 'float')
+    elif type_name[:8] == '_padding':
+        out_base_type = (True, '_padding')
+    elif type_name == 'string':
+        out_base_type = (True, 'string')
+
+    return out_base_type
+
+
 def write_tlm_cmd_data(yaml_data: dict, db_cursor: sqlite3.Cursor):
     write_module_records(yaml_data, db_cursor)
 
@@ -644,6 +765,13 @@ def write_tlm_cmd_data(yaml_data: dict, db_cursor: sqlite3.Cursor):
     write_algorithm_triggers_records(yaml_data, algorithms_dict, telemetry_dict, db_cursor)
 
     write_algorithm_inputs_records(yaml_data, algorithms_dict, db_cursor)
+
+    # Get all algorithms needed now that they are on the database.
+    symbols_dict = {}
+    for symbol_id, symbol_name in db_cursor.execute('select id, name from symbols').fetchall():
+        symbols_dict[symbol_name] = symbol_id
+
+    write_algorithm_outputs_records(yaml_data, algorithms_dict, symbols_dict, db_cursor)
 
 
 def parse_cli() -> argparse.Namespace:

@@ -429,7 +429,7 @@ def write_algorithm_outputs_records(algorithm_data: dict,
                                     db_cursor.execute('INSERT INTO fields(symbol, name, byte_offset, type, '
                                                       'little_endian, bit_size, bit_offset)'
                                                       'VALUES (?, ?, ?, ?, ?, ?, ?)',
-                                                      (symbol_id, member_name, current_member_offset, symbol_id, 0, 0, 0))
+                                                      (p_type, member_name, current_member_offset, symbol_id, 0, 0, 0))
 
                                     current_member_offset += member_size[0]
 

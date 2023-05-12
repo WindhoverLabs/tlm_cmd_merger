@@ -396,7 +396,7 @@ def write_algorithm_outputs_records(algorithm_data: dict,
                                                   f"string] or 'aggregate'")
                                     continue
 
-                                new_type_name = module_name+ '_' + p_type_name + "_t"
+                                new_type_name = module_name + '_' + parameter_name + '_' + p_type_name + "_t"
                                 new_type_byte_size = 0
                                 if new_type_name in symbols_dict:
                                     logging.warning(f"Reusing the algorithms type '{new_type_name}'")
@@ -437,7 +437,7 @@ def write_algorithm_outputs_records(algorithm_data: dict,
                             db_cursor.execute(
                                 'INSERT INTO algorithm_outputs(parameter_ref, output_name, description, algorithm, type) '
                                 'VALUES (?, ?, ?, ?, ?)',
-                                (new_type_name, parameter_name, description, algorithms_dict[algorithm], p_type))
+                                (module_name + '_' + parameter_name + '_' + p_type_name , parameter_name, description, algorithms_dict[algorithm], p_type))
 
             if 'modules' in algorithm_data['modules'][module_name]:
                 write_algorithm_outputs_records(algorithm_data['modules'][module_name],

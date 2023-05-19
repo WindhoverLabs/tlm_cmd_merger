@@ -436,7 +436,9 @@ def write_algorithm_outputs_records(algorithm_data: dict,
                             db_cursor.execute(
                                 'INSERT INTO algorithm_outputs(parameter_ref, output_name, description, algorithm, type) '
                                 'VALUES (?, ?, ?, ?, ?)',
-                                (module_name + '_' + parameter_name + '_' + p_type_name , parameter_name, description, algorithms_dict[algorithm], p_type))
+                                # TODO: Not sure if we want to make the ref and output_name the same...
+                                # (module_name + '_' + parameter_name, parameter_name, description, algorithms_dict[algorithm], p_type))
+                                (parameter_name, parameter_name, description, algorithms_dict[algorithm], p_type))
 
             if 'modules' in algorithm_data['modules'][module_name]:
                 write_algorithm_outputs_records(algorithm_data['modules'][module_name],

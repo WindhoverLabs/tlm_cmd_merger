@@ -374,7 +374,6 @@ def write_algorithm_outputs_records(algorithm_data: dict,
                             p_type = 0
                             if p_type_name in symbols_dict:
                                 p_type = symbols_dict[p_type_name]
-                                # continue
                             else:
                                 if p_type_name != 'aggregate':
                                     logging.error(f"type '{p_type} must be either'"

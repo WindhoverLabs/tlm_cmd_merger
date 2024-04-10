@@ -224,9 +224,10 @@ def write_telemetry_records(telemetry_data: dict, modules_dict: dict, db_cursor:
                         # FIXME: This logic is starting to look convoluted. The schema might help with this.
                         if 'msgID' in message_dict:
                             if message_dict['msgID'] is None:
-                                logging.error(
-                                    f"modules.{module_name}.telemetry.{name}.msgID must not be empty. Skipping.")
-                                continue
+                                message_id = 0
+                                logging.warning(
+                                    f"modules.{module_name}.telemetry.{name}.msgID must not be empty. Setting it to 0.")
+                                # continue
                             else:
                                 message_id = message_dict['msgID']
                         else:

@@ -514,8 +514,9 @@ def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sql
                 command_dict = command_data['modules'][module_name]['commands'][command]
 
                 if command_dict['msgID'] is None:
-                    logging.error(f"modules.{module_name}.commands.{command}.msgID must not be empty.  Skipping.")
-                    continue
+                    command_dict['msgID'] = 0
+                    logging.warning(f"modules.{module_name}.commands.{command}.msgID must not be empty.  Setting it to 0.")
+                    # continue
 
                 message_id = command_dict['msgID']
 

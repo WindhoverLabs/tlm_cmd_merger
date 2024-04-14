@@ -27,6 +27,8 @@ def add_tables(db_cursor: sqlite3.Cursor):
                       'symbol INTEGER NOT NULL, '
                       'module INTEGER NOT NULL,'
                       'min_rate INTEGER,'
+                      'short_description TEXT,'
+                      'long_description TEXT,'
                       'FOREIGN KEY (symbol) REFERENCES symbols(id), '
                       'FOREIGN KEY (module) REFERENCES modules(id),'
                       'UNIQUE (name, message_id, module)'
@@ -40,6 +42,8 @@ def add_tables(db_cursor: sqlite3.Cursor):
                       'macro TEXT,'
                       'symbol INTEGER NOT NULL, '
                       'module INTEGER NOT NULL,'
+                      'short_description TEXT,'
+                      'long_description TEXT,'
                       'FOREIGN KEY (symbol) REFERENCES symbols(id),'
                       'FOREIGN KEY (module) REFERENCES modules(id),'
                       'UNIQUE (name, command_code, module, message_id));')
@@ -49,6 +53,8 @@ def add_tables(db_cursor: sqlite3.Cursor):
                       'event_id INTEGER,'
                       'name TEXT,'
                       'module INTEGER,'
+                      'short_description TEXT,'
+                      'long_description TEXT,'
                       'FOREIGN KEY (module) REFERENCES modules(id),'
                       'UNIQUE (event_id, module));')
 
@@ -60,11 +66,13 @@ def add_tables(db_cursor: sqlite3.Cursor):
                       'FOREIGN KEY (module) REFERENCES modules(id),'
                       'UNIQUE (name, module));')
 
-    db_cursor.execute('create table if not exists performance_ids('
+    db_cursor.execute('create table if not exists performance('
                       'id INTEGER primary key,'
                       'name TEXT,'
                       'perf_id INTEGER NOT NULL,'
                       'module INTEGER NOT NULL,'
+                      'short_description TEXT,'
+                      'long_description TEXT,'
                       'FOREIGN KEY (module) REFERENCES modules(id),'
                       'UNIQUE (name, perf_id, module));')
 
@@ -74,6 +82,8 @@ def add_tables(db_cursor: sqlite3.Cursor):
                       'language TEXT NOT NULL,'
                       'script_path TEXT,'
                       'type TEXT,'
+                      'short_description TEXT,'
+                      'long_description TEXT,'
                       'module INTEGER NOT NULL,'
                       'FOREIGN KEY (module) REFERENCES modules(id),'
                       'UNIQUE (name, module));')
@@ -698,7 +708,7 @@ def write_perf_id_records(perf_id_data: dict, modules_dict: dict, db_cursor: sql
                 perf_id = perf_dict['id']
 
                 # Write our event record to the database.
-                db_cursor.execute('INSERT INTO performance_ids(name, perf_id ,module) '
+                db_cursor.execute('INSERT INTO performance(name, perf_id ,module) '
                                   'VALUES (?, ?, ?)',
                                   (name, perf_id, modules_dict[module_name]))
 
@@ -795,20 +805,41 @@ def parse_cli() -> argparse.Namespace:
                         required=True)
     parser.add_argument('--sqlite_path', type=str,
                         help='The file path to the sqlite database', required=True)
+    parser.add_argument('--module_path', type=str,
+                        help='The path to the module to parse, i.e. "cpd", "ppd", "simlink", or "reference".', required=True)
 
     return parser.parse_args()
+    
+    
+def get_module_by_path(module_path: str, yaml_data: dict): 
+    module_yaml_dict = yaml_data    
+     
+    for module_name in module_path.split("/"):
+        if module_name != "":                
+            if "modules" in module_yaml_dict:
+                if module_name not in module_yaml_dict["modules"]:
+                    logging.error('"{0}" is not found. Aborting'.format(module_name))
+                    exit(-1)
+                else:
+                    module_yaml_dict = module_yaml_dict["modules"][module_name]
+            else:
+                logging.error('"{0}" is not found. Aborting'.format(module_name))
+                exit(-1)
+                
+    return module_yaml_dict
 
 
-def merge_all(database_path: str, yaml_file: str):
+def merge_all(database_path: str, module_path: str, yaml_file: str):
     db_handle = sqlite3.connect(database_path)
     db_cursor = db_handle.cursor()
 
     add_tables(db_cursor)
 
-    yaml_data = read_yaml(yaml_file)
-
+    full_yaml_data = read_yaml(yaml_file)
+    module_data = get_module_by_path(module_path, full_yaml_data)
+    
     # Write all the data to the database.
-    write_tlm_cmd_data(yaml_data, db_cursor)
+    write_tlm_cmd_data(module_data, db_cursor)
 
     # Save our changes to the database.
     db_handle.commit()
@@ -816,7 +847,7 @@ def merge_all(database_path: str, yaml_file: str):
 
 def main():
     args = parse_cli()
-    merge_all(args.sqlite_path, args.yaml_path)
+    merge_all(args.sqlite_path, args.module_path, args.yaml_path)
 
 
 if __name__ == '__main__':

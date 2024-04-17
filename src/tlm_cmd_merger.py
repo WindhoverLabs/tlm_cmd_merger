@@ -143,7 +143,7 @@ def get_module_id(module_name: str, db_cursor: sqlite3.Cursor) -> tuple:
     """
     Fetches the id of the module whose name module_name
     :param module_name: The name of the module as it appears in the database.
-    :param db_cursor: The cursor that points to the databse.
+    :param db_cursor: The cursor that points to the database.
     :return: The module id.
     """
     module_id = db_cursor.execute('SELECT * FROM modules where name =?',
@@ -166,7 +166,7 @@ def get_symbol_id(symbol_name: str, db_cursor: sqlite3.Cursor) -> tuple:
     """
     Fetches the id of the symbol whose name symbol_name
     :param symbol_name: The name of the module as it appears in the database.
-    :param db_cursor: The cursor that points to the databse.
+    :param db_cursor: The cursor that points to the database.
     :return: The module id.
     """
     symbol_id = db_cursor.execute('SELECT * FROM symbols where name =?',
@@ -176,7 +176,7 @@ def get_symbol_id(symbol_name: str, db_cursor: sqlite3.Cursor) -> tuple:
 
 def write_module_records(module_data: dict, db_cursor, parent_module: str = None):
     """
-    Scans module_data and writes each module to the database..
+    Scans module_data and writes each module to the database...
     :param parent_module:
     :param module_data:
     :param db_cursor:
@@ -191,14 +191,14 @@ def write_module_records(module_data: dict, db_cursor, parent_module: str = None
             except sqlite3.IntegrityError:
                 logging.warning(
                     f'The module "{module}" was not added. This is most likely due to trying to add it twice'
-                    f' to the datbase. Please revise your configuration file. ')
+                    f' to the database. Please revise your configuration file. ')
         else:
             try:
                 db_cursor.execute('insert into modules(name) values(?)', (module,))
             except sqlite3.IntegrityError:
                 logging.warning(
                     f'The module "{module}" was not added. This is most likely due to trying to add it twice'
-                    f' to the datbase. Please revise your configuration file. ')
+                    f' to the database. Please revise your configuration file. ')
 
         if 'modules' in module_data['modules'][module]:
             write_module_records(module_data['modules'][module], db_cursor, module)
@@ -206,7 +206,7 @@ def write_module_records(module_data: dict, db_cursor, parent_module: str = None
 
 def write_telemetry_records(telemetry_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):
     """
-    Scans telemetry_data and writes it to the database. Pleas note that the database changes are not committed. Thus
+    Scans telemetry_data and writes it to the database. Please note that the database changes are not committed. Thus,
     it is the responsibility of the caller to commit these changes to the database.
     :param telemetry_data:
     :param db_cursor:
@@ -284,7 +284,7 @@ def write_algorithm_triggers_records(algorithm_data: dict,
                                      telemetry_dict: dict,
                                      db_cursor: sqlite3.Cursor):
     """
-    Scans algorithm_data and writes it to the database. Please note that the database changes are not committed. Thus
+    Scans algorithm_data and writes it to the database. Please note that the database changes are not committed. Thus,
     it is the responsibility of the caller to commit these changes to the database.
     :param algorithm_data:
     :param db_cursor:
@@ -321,7 +321,7 @@ def write_algorithm_inputs_records(algorithm_data: dict,
                                    algorithms_dict: dict,
                                    db_cursor: sqlite3.Cursor):
     """
-    Scans algorithm_data and writes it to the database. Please note that the database changes are not committed. Thus
+    Scans algorithm_data and writes it to the database. Please note that the database changes are not committed. Thus,
     it is the responsibility of the caller to commit these changes to the database.
     :param algorithm_data:
     :param db_cursor:
@@ -359,7 +359,7 @@ def write_algorithm_outputs_records(algorithm_data: dict,
                                     symbols_dict: dict,
                                     db_cursor: sqlite3.Cursor):
     """
-    Scans algorithm_data and writes it to the database. Please note that the database changes are not committed. Thus
+    Scans algorithm_data and writes it to the database. Please note that the database changes are not committed. Thus,
     it is the responsibility of the caller to commit these changes to the database.
     :param algorithm_data:
     :param db_cursor:
@@ -460,7 +460,7 @@ def write_algorithm_outputs_records(algorithm_data: dict,
 
 def write_algorithm_records(algorithm_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):
     """
-    Scans algorithm_data and writes it to the database. Please note that the database changes are not committed. Thus
+    Scans algorithm_data and writes it to the database. Please note that the database changes are not committed. Thus,
     it is the responsibility of the caller to commit these changes to the database.
     :param algorithm_data:
     :param db_cursor:
@@ -503,7 +503,7 @@ def write_algorithm_records(algorithm_data: dict, modules_dict: dict, db_cursor:
 
 def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):
     """
-    Scans command_data and writes it to the database. Pleas note that the database changes are not committed. Thus
+    Scans command_data and writes it to the database. Please note that the database changes are not committed. Thus,
     it is the responsibility of the caller to commit these changes to the database.
     :param command_data:
     :param db_cursor:
@@ -582,7 +582,7 @@ def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sql
 
 def write_event_records(event_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):
     """
-    Scans event_data and writes it to the database. Pleas note that the database changes are not committed. Thus
+    Scans event_data and writes it to the database. Please note that the database changes are not committed. Thus,
     it is the responsibility of the caller to commit these changes to the database.
     :param event_data:
     :param db_cursor:
@@ -622,11 +622,13 @@ def write_event_records(event_data: dict, modules_dict: dict, db_cursor: sqlite3
                 db_cursor.execute('INSERT INTO events(event_id, name, module) '
                                   'VALUES (?, ?, ?)',
                                   (event_id, event_name, modules_dict[module_name],))
+        if 'modules' in event_data['modules'][module_name]:
+            write_event_records(event_data['modules'][module_name], modules_dict, db_cursor)
 
 
 def write_configuration_records(config_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):
     """
-    Scans config_data and writes it to the database. Pleas note that the database changes are not committed. Thus
+    Scans config_data and writes it to the database. Please note that the database changes are not committed. Thus,
     it is the responsibility of the caller to commit these changes to the database.
     :param config_data:
     :param db_cursor:
@@ -666,11 +668,12 @@ def write_configuration_records(config_data: dict, modules_dict: dict, db_cursor
                 db_cursor.execute('INSERT INTO configurations(name, value ,module) '
                                   'VALUES (?, ?, ?)',
                                   (name, value, modules_dict[module_name]))
-
+        if 'modules' in config_data['modules'][module_name]:
+            write_configuration_records(config_data['modules'][module_name], modules_dict, db_cursor)
 
 def write_perf_id_records(perf_id_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):
     """
-    Scans perf_id_data and writes it to the database. Pleas note that the database changes are not committed. Thus
+    Scans perf_id_data and writes it to the database. Please note that the database changes are not committed. Thus,
     it is the responsibility of the caller to commit these changes to the database.
     :param perf_id_data:
     :param db_cursor:
@@ -721,9 +724,9 @@ def __is_base_type(type_name: str) -> tuple:
     namespace to the type, that is the responsibility of the caller. Please note that padding types are also
     considered base types. Padding types have the form of _padding[Number Of Bits] such as _padding8.
 
-    NOTE:While strings are considered a base type, it should be noted that, as opposed to all of the other base types,
+    NOTE:While strings are considered a base type, it should be noted that, as opposed to all the other base types,
     they are created as needed. This is because we can't really predict their sizes, like we do
-    ints, not even a range as a string could be of any size. Thus they are created on the fly.
+    ints, not even a range as a string could be of any size. Thus, they are created on the fly.
     """
     out_base_type = (False, '')
 
@@ -797,7 +800,7 @@ def write_tlm_cmd_data(yaml_data: dict, db_cursor: sqlite3.Cursor):
 def parse_cli() -> argparse.Namespace:
     """
     Parses cli arguments.
-    :return: The namespace that has all of the arguments that have been parsed.
+    :return: The namespace that has all the arguments that have been parsed.
     """
     parser = argparse.ArgumentParser(description='Takes in paths to yaml file and sqlite database.')
     parser.add_argument('--yaml_path', type=str,

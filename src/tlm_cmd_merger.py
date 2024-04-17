@@ -66,16 +66,6 @@ def add_tables(db_cursor: sqlite3.Cursor):
                       'FOREIGN KEY (module) REFERENCES modules(id),'
                       'UNIQUE (name, module));')
 
-    db_cursor.execute('create table if not exists performance('
-                      'id INTEGER primary key,'
-                      'name TEXT,'
-                      'perf_id INTEGER NOT NULL,'
-                      'module INTEGER NOT NULL,'
-                      'short_description TEXT,'
-                      'long_description TEXT,'
-                      'FOREIGN KEY (module) REFERENCES modules(id),'
-                      'UNIQUE (name, perf_id, module));')
-
     db_cursor.execute('create table if not exists algorithms('
                       'id INTEGER primary key,'
                       'name TEXT NOT NULL,'
@@ -671,50 +661,6 @@ def write_configuration_records(config_data: dict, modules_dict: dict, db_cursor
         if 'modules' in config_data['modules'][module_name]:
             write_configuration_records(config_data['modules'][module_name], modules_dict, db_cursor)
 
-def write_perf_id_records(perf_id_data: dict, modules_dict: dict, db_cursor: sqlite3.Cursor):
-    """
-    Scans perf_id_data and writes it to the database. Please note that the database changes are not committed. Thus,
-    it is the responsibility of the caller to commit these changes to the database.
-    :param perf_id_data:
-    :param db_cursor:
-    :return:
-    """
-    name = None
-    macro = None
-    module_id = None
-    perf_id = None
-
-    # This has a modules key, but its empty.  Skip it.
-    if perf_id_data['modules'] is None:
-        return
-
-    for module_name in perf_id_data['modules']:
-        if 'perf_ids' in perf_id_data['modules'][module_name]:
-            if perf_id_data['modules'][module_name]['perf_ids'] is None:
-                logging.error(f"modules.{module_name}.perf_ids is empty.  Skipping.")
-                continue
-
-            for perf_name in perf_id_data['modules'][module_name]['perfids']:
-                perf_dict = perf_id_data['modules'][module_name]['perfids'][perf_name]
-
-                if perf_dict is None:
-                    logging.error(f"modules{module_name}.perfids.{perf_name} is empty.  Skipping.")
-                    continue
-
-                if perf_dict['id'] is None:
-                    logging.error(f"modules.{module_name}.perfids.{perf_name}.id is empty.  Skipping.")
-                    continue
-
-                name = perf_name
-                # FIXME: Not sure if we'll read the macro in step of the chain
-                # macro = event_dict['macro']
-                perf_id = perf_dict['id']
-
-                # Write our event record to the database.
-                db_cursor.execute('INSERT INTO performance(name, perf_id ,module) '
-                                  'VALUES (?, ?, ?)',
-                                  (name, perf_id, modules_dict[module_name]))
-
 
 def __is_base_type(type_name: str) -> tuple:
     """
@@ -775,7 +721,6 @@ def write_tlm_cmd_data(yaml_data: dict, db_cursor: sqlite3.Cursor):
     write_command_records(yaml_data, modules_dict, db_cursor)
     write_event_records(yaml_data, modules_dict, db_cursor)
     write_configuration_records(yaml_data, modules_dict, db_cursor)
-    write_perf_id_records(yaml_data, modules_dict, db_cursor)
 
     write_algorithm_records(yaml_data, modules_dict, db_cursor)
 

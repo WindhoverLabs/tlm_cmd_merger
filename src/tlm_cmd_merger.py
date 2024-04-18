@@ -644,11 +644,15 @@ def write_configuration_records(config_data: dict, modules_dict: dict, db_cursor
                 if config_dict is None:
                     logging.error(f"modules.{module_name}.config.{config} is empty.  Skipping.")
                     continue
-
-                if config_dict['value'] is None:
-                    logging.error(f"modules.{module_name}.config.{config}.value is empty.  Skipping.")
+                
+                if type(config_dict) is not dict:
+                    logging.error(f"modules.{module_name}.config.{config} is not a dictionary.  Skipping.")
                     continue
 
+                if not isinstance(config_dict['value'], str):
+                    logging.error(f"modules.{module_name}.config.{config}.value is not a string.  Skipping.")
+                    continue
+                
                 name = config
                 # FIXME: Not sure if we'll read the macro in step of the chain
                 # macro = event_dict['macro']

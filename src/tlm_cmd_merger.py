@@ -231,7 +231,7 @@ def write_telemetry_records(telemetry_data: dict, modules_dict: dict, db_cursor:
                             else:
                                 message_id = message_dict['msgID']
                         else:
-                            logging.error(f"modules.{module_name}.telemetry.{name}.msgID key must exist.  Skipping.")
+                            logging.warning(f"modules.{module_name}.telemetry.{name}.msgID key must exist.  Skipping.")
 
                         if 'min_rate' in message_dict:
                             if message_dict['min_rate'] is None:
@@ -241,17 +241,17 @@ def write_telemetry_records(telemetry_data: dict, modules_dict: dict, db_cursor:
 
                         if 'struct' in message_dict:
                             if message_dict['struct'] is None:
-                                logging.error(
+                                logging.warning(
                                     f"modules.{module_name}.telemetry.{name}.struct must not be empty. Skipping.")
                                 continue
                             else:
                                 symbol = get_symbol_id(message_dict['struct'], db_cursor)
                         else:
-                            logging.error(f"modules.{module_name}.telemetry.{name}.struct key must exist. Skipping.")
+                            logging.warning(f"modules.{module_name}.telemetry.{name}.struct key must exist. Skipping.")
 
                         # If the symbol does not exist, we skip it
                         if symbol is None:
-                            logging.error(
+                            logging.warning(
                                 f"modules.{module_name}.telemetry.{name}.struct could not be found.  Skipping.")
                         else:
                             symbol_id = symbol[0]
@@ -471,7 +471,7 @@ def write_algorithm_records(algorithm_data: dict, modules_dict: dict, db_cursor:
                         name = algorithm_data['modules'][module_name]['algorithms'][algorithm]['name']
                         type = algorithm_data['modules'][module_name]['algorithms'][algorithm]['type']
                         if not (type in ['custom']):
-                            logging.error(
+                            logging.warning(
                                 f"modules.{module_name}.algorithms.type must be in the supported list{['custom']}. "
                                 f"Skipping.")
                             continue
@@ -521,12 +521,12 @@ def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sql
                 message_id = command_dict['msgID']
 
                 if message_id is None:
-                    logging.error(
+                    logging.warning(
                         f"modules.{module_name}.commands.{command} message does not have any msgID defined. Skipping.")
                     continue
 
                 if command_data['modules'][module_name]['commands'] is None:
-                    logging.error(
+                    logging.warning(
                         f"modules.{module_name}.commands.{command} message does not have any actual commands defined.  Skipping.")
                     continue
 
@@ -535,7 +535,7 @@ def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sql
                 if 'commands' in sub_commands[command]:
                     for sub_command in sub_commands[command]['commands']:
                         if sub_commands[command]['commands'] is None:
-                            logging.error(
+                            logging.warning(
                                 f"modules.{module_name}.commands.{command}.{sub_command} command is empty.  Skipping.")
                             continue
 
@@ -546,13 +546,13 @@ def write_command_records(command_data: dict, modules_dict: dict, db_cursor: sql
 
                         # If the symbol does not exist, we skip it
                         if not symbol:
-                            logging.error(
+                            logging.warning(
                                 f"modules.{module_name}.commands.{command}.{sub_command}.{sub_command_dict[name]['struct']} was not found.  Skipping.")
                         else:
                             symbol_id = symbol[0]
 
                             if sub_command_dict[name]['cc'] is None:
-                                logging.error(
+                                logging.warning(
                                     f"modules.{module_name}.commands.{command}.cc must not be empty.  Skipping.")
                                 continue
 
@@ -588,18 +588,18 @@ def write_event_records(event_data: dict, modules_dict: dict, db_cursor: sqlite3
     for module_name in event_data['modules']:
         if 'events' in event_data['modules'][module_name]:
             if event_data['modules'][module_name]['events'] is None:
-                logging.error(f"modules.{module_name}.events is empty.  Skipping.")
+                logging.warning(f"modules.{module_name}.events is empty.  Skipping.")
                 continue
 
             for event in event_data['modules'][module_name]['events']:
                 event_dict = event_data['modules'][module_name]['events'][event]
 
                 if event_dict is None:
-                    logging.error(f"modules.{module_name} .events.{event} must not be empty.  Skipping.")
+                    logging.warning(f"modules.{module_name} .events.{event} must not be empty.  Skipping.")
                     continue
 
                 if event_dict['id'] is None:
-                    logging.error(f"modules.{module_name} .events.{event}.id must not be empty.  Skipping.")
+                    logging.warning(f"modules.{module_name} .events.{event}.id must not be empty.  Skipping.")
                     continue
 
                 event_id = event_dict['id']
@@ -635,22 +635,22 @@ def write_configuration_records(config_data: dict, modules_dict: dict, db_cursor
     for module_name in config_data['modules']:
         if 'config' in config_data['modules'][module_name]:
             if config_data['modules'][module_name]['config'] is None:
-                logging.error(f"modules.{module_name}.config is empty.  Skipping.")
+                logging.warning(f"modules.{module_name}.config is empty.  Skipping.")
                 continue
 
             for config in config_data['modules'][module_name]['config']:
                 config_dict = config_data['modules'][module_name]['config'][config]
 
                 if config_dict is None:
-                    logging.error(f"modules.{module_name}.config.{config} is empty.  Skipping.")
+                    logging.warning(f"modules.{module_name}.config.{config} is empty.  Skipping.")
                     continue
                 
                 if type(config_dict) is not dict:
-                    logging.error(f"modules.{module_name}.config.{config} is not a dictionary.  Skipping.")
+                    logging.warning(f"modules.{module_name}.config.{config} is not a dictionary.  Skipping.")
                     continue
 
                 if not isinstance(config_dict['value'], str):
-                    logging.error(f"modules.{module_name}.config.{config}.value is not a string.  Skipping.")
+                    logging.warning(f"modules.{module_name}.config.{config}.value is not a string.  Skipping.")
                     continue
                 
                 name = config
